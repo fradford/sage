@@ -1,0 +1,8 @@
+# General unnecessary files to add to repo
+__pycache__/
+input/
+output/
+waves.db
+
+# Pycharm config files
+.idea/
