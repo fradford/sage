@@ -7,7 +7,7 @@ pleasing "music" and to convert music files back into images.
 Why the name Sage?
 ------------------
 
-It's simply the most pleasing combination of sound and image I could think of.
+It was simply the most pleasing combination of sound and image I could think of. There's no higher meaning to it.
 
 Usage
 -----
