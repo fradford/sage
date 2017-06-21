@@ -2,6 +2,8 @@ import math
 import struct
 import wave
 import itertools
+import sys
+import multiprocessing
 
 from functools import reduce
 from PIL import Image
@@ -11,6 +13,8 @@ from tqdm import tqdm
 class ImageToSound:
     def __init__(self, args):
         self.args = args
+        self.total_pixels = 0
+        self.total_frames = self.args.framerate * self.args.duration
 
     def run(self):
         channels = self.freq_from_file(self.args.infile)
@@ -22,28 +26,27 @@ class ImageToSound:
     def freq_from_file(self, file):
         img = Image.open(file)
         cur_freq = 0
+        self.total_pixels = reduce(lambda x, y: x*y, img.size)
 
-        for pixel in tqdm((x for x in img.getdata()), total=reduce(lambda x, y: x*y, img.size), desc="Converting Image",
-                          dynamic_ncols=True, leave=False):
+        for pixel in tqdm((x for x in img.getdata()), total=self.total_pixels, desc="Converting Image",
+                          dynamic_ncols=True, leave=True):
+            cur_freq = 0
             for band in pixel:
                 cur_freq += band
-            yield self.sine_wave_gen(cur_freq, self.args.framerate)
-            cur_freq = 0
+            yield self.sine_wave_gen(cur_freq, self.args.framerate, self.args.duration)
 
-    def sine_wave_gen(self, frequency, framerate=44100, amplitude=1, note_length=1):
-        for i in range(0, round(framerate * note_length)):
+    @staticmethod
+    def sine_wave_gen(frequency, framerate=44100, duration=1, amplitude=1):
+        for i in range(framerate * duration):
             yield math.sin(2.0 * math.pi * float(frequency) * (float(i) / float(framerate))) * float(amplitude)
 
     def compute_channel(self, channels):
-        for gen in channels:
-            length = 0
-            gen_sum = 0
-            for val in gen:
-                length += 1
-                gen_sum += val
-            yield gen_sum / length
+        for gen in tqdm(((x for x in y) for y in zip(*channels)), total=self.total_frames, desc="Combining Waves",
+                        dynamic_ncols=True, leave=True):
+            yield sum(gen) / self.total_frames
 
-    def grouper(self, group_size, iterable, fill_val=None):
+    @staticmethod
+    def grouper(group_size, iterable, fill_val=None):
         args = [iter(iterable)] * group_size
         return itertools.zip_longest(*args, fillvalue=fill_val)
 

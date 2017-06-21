@@ -15,7 +15,7 @@ def main():
                                                 "likely want to specify this if you are specifying -a.",
                         action="store_true")
     parser.add_argument('-f', '--framerate', help="Output framerate.", default=48000, type=int)
-    parser.add_argument('-l', '--duration', help="Length of output.", default=180, type=float)
+    parser.add_argument('-l', '--duration', help="Length of output.", default=180, type=int)
     args = parser.parse_args()
 
     if args.mode == 0:
