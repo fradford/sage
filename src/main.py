@@ -16,6 +16,7 @@ def main():
                         action="store_true")
     parser.add_argument('-f', '--framerate', help="Output framerate.", default=48000, type=int)
     parser.add_argument('-l', '--duration', help="Length of output.", default=180, type=int)
+    parser.add_argument('-c', '--chunk_size', help="Size of chunk.", default=1, type=int)
     args = parser.parse_args()
 
     if args.mode == 0:

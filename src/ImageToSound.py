@@ -1,9 +1,6 @@
 import math
 import struct
 import wave
-import itertools
-import sys
-import multiprocessing
 
 from functools import reduce
 from PIL import Image
@@ -17,19 +14,27 @@ class ImageToSound:
         self.total_frames = self.args.framerate * self.args.duration
 
     def run(self):
-        channels = self.freq_from_file(self.args.infile)
-        samples = self.compute_channel(channels)
+        img = Image.open(self.args.infile)
+        self.total_pixels = reduce(lambda x, y: x * y, img.size)
 
-        self.write_wavefile(self.args.outfile, samples, self.args.framerate * self.args.duration,
+        self.write_wavefile(self.args.outfile, img, self.args.chunk_size, self.args.framerate * self.args.duration,
                             framerate=self.args.framerate)
 
-    def freq_from_file(self, file):
-        img = Image.open(file)
-        cur_freq = 0
-        self.total_pixels = reduce(lambda x, y: x*y, img.size)
+    def write_wavefile(self, filename, img, bufsize, nframes=-1, nchannels=1, sampwidth=2, framerate=44100):
+        wavefile = wave.open(filename, "w")
+        wavefile.setparams((nchannels, sampwidth, framerate, nframes, "NONE", "not compressed"))
 
+        max_amplitude = 32767
+
+        frames = b''.join(struct.pack('h', int(max_amplitude * sample)) for sample in
+                          self.compute_channel(self.freq_from_file(img), bufsize))
+        wavefile.writeframesraw(frames)
+
+        wavefile.close()
+
+    def freq_from_file(self, img):
         for pixel in tqdm((x for x in img.getdata()), total=self.total_pixels, desc="Converting Image",
-                          dynamic_ncols=True, leave=True):
+                          dynamic_ncols=True, leave=False):
             cur_freq = 0
             for band in pixel:
                 cur_freq += band
@@ -40,27 +45,17 @@ class ImageToSound:
         for i in range(framerate * duration):
             yield math.sin(2.0 * math.pi * float(frequency) * (float(i) / float(framerate))) * float(amplitude)
 
-    def compute_channel(self, channels):
-        for gen in tqdm(((x for x in y) for y in zip(*channels)), total=self.total_frames, desc="Combining Waves",
-                        dynamic_ncols=True, leave=True):
-            yield sum(gen) / self.total_frames
-
     @staticmethod
-    def grouper(group_size, iterable, fill_val=None):
-        args = [iter(iterable)] * group_size
-        return itertools.zip_longest(*args, fillvalue=fill_val)
+    def chunk_channels(channels, chunk_size):
+        for iterator in channels:
+            yield zip(*[iter(iterator)] * chunk_size)
 
-    def write_wavefile(self, filename, samples, nframes=None, nchannels=2, sampwidth=2, framerate=44100, bufsize=2048):
-        if nframes is None:
-            nframes = -1
-
-        w = wave.open(filename, "w")
-        w.setparams((nchannels, sampwidth, framerate, nframes, "NONE", "not compressed"))
-
-        max_amplitude = float(int((2 ** (sampwidth * 8)) / 2) - 1)
-
-        for chunk in self.grouper(bufsize, samples):
-            frames = b''.join(struct.pack('h', int(max_amplitude * sample)) for sample in chunk if sample is not None)
-            w.writeframesraw(frames)
-
-        w.close()
+    def compute_channel(self, channels, bufsize):
+        # Unpacking the generator returned from chunk_channels is not only incredibly slow it also creates a temporary
+        # tuple of all the objects in the generator, effectively defeating the whole purpose of using generators in the
+        # first place. This is where the memory issues are coming from, this generator cannot be unpacked, it is simply
+        # too large.
+        for chunk in tqdm(((x for x in y) for y in zip(*self.chunk_channels(channels, bufsize))), total=self.total_frames,
+                          desc="Combining Waves", dynamic_ncols=True, leave=True):
+            for gen in ((x for x in y) for y in zip(*chunk)):
+                yield sum(gen) / (self.total_frames * self.total_pixels)
