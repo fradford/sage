@@ -21,25 +21,25 @@ class ImageToSound:
         img = Image.open(self.args.infile)
         self.total_pixels = reduce(lambda x, y: x * y, img.size)
 
-        self.write_wavefile(self.args.outfile, img, self.args.chunk_size, self.total_frames,
-                            framerate=self.args.framerate)
+        self.write_file(self.args.outfile, img, self.args.chunk_size, self.total_frames,
+                        framerate=self.args.framerate)
 
-    def write_wavefile(self, filename, img, bufsize, nframes=-1, nchannels=1, sampwidth=2, framerate=44100):
-        wavefile = wave.open(filename, "w")
-        wavefile.setparams((nchannels, sampwidth, framerate, nframes, "NONE", "not compressed"))
+    def write_file(self, filename, img, num_frames=-1, num_channels=1, sample_width=2, framerate=44100):
+        file = wave.open(filename, "w")
+        file.setparams((num_channels, sample_width, framerate, num_frames, "NONE", "not compressed"))
 
         max_amplitude = 32767
 
         for chunk in self.group(self.args.chunk_size, self.combine_wave(img)):
             frames = b''.join(struct.pack('h', int(max_amplitude * sample)) for sample in chunk)
-            wavefile.writeframesraw(frames)
+            file.writeframesraw(frames)
 
-        wavefile.close()
+        file.close()
 
     def combine_wave(self, img):
-        def get_freq(pixel):
+        def get_freq(rgb):
             cur_freq = 0
-            for band in pixel:
+            for band in rgb:
                 cur_freq += band
             return cur_freq
 
