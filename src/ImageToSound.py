@@ -1,10 +1,14 @@
 import math
 import struct
 import wave
-
 from functools import reduce
+from itertools import chain, islice
+
 from PIL import Image
 from tqdm import tqdm
+
+
+# TODO: Parallelism
 
 
 class ImageToSound:
@@ -17,7 +21,7 @@ class ImageToSound:
         img = Image.open(self.args.infile)
         self.total_pixels = reduce(lambda x, y: x * y, img.size)
 
-        self.write_wavefile(self.args.outfile, img, self.args.chunk_size, self.args.framerate * self.args.duration,
+        self.write_wavefile(self.args.outfile, img, self.args.chunk_size, self.total_frames,
                             framerate=self.args.framerate)
 
     def write_wavefile(self, filename, img, bufsize, nframes=-1, nchannels=1, sampwidth=2, framerate=44100):
@@ -26,36 +30,41 @@ class ImageToSound:
 
         max_amplitude = 32767
 
-        frames = b''.join(struct.pack('h', int(max_amplitude * sample)) for sample in
-                          self.compute_channel(self.freq_from_file(img), bufsize))
-        wavefile.writeframesraw(frames)
+        for chunk in self.group(self.args.chunk_size, self.combine_wave(img)):
+            frames = b''.join(struct.pack('h', int(max_amplitude * sample)) for sample in chunk)
+            wavefile.writeframesraw(frames)
 
         wavefile.close()
 
-    def freq_from_file(self, img):
-        for pixel in tqdm((x for x in img.getdata()), total=self.total_pixels, desc="Converting Image",
-                          dynamic_ncols=True, leave=False):
+    def combine_wave(self, img):
+        def get_freq(pixel):
             cur_freq = 0
             for band in pixel:
                 cur_freq += band
-            yield self.sine_wave_gen(cur_freq, self.args.framerate, self.args.duration)
+            return cur_freq
+
+        for frame in tqdm(range(self.total_frames), desc="Calculating Wave", dynamic_ncols=True):
+            value = 0
+            if self.args.inner_count:
+                for pixel in tqdm((x for x in img.getdata()), total=self.total_pixels, desc="Reading image",
+                                  dynamic_ncols=True, leave=False):
+                    value += self.next_sine_val(get_freq(pixel), frame, self.args.framerate)
+            else:
+                for pixel in (x for x in img.getdata()):
+                    value += self.next_sine_val(get_freq(pixel), frame, self.args.framerate)
+            yield round(value / (self.total_frames * self.total_pixels))
 
     @staticmethod
-    def sine_wave_gen(frequency, framerate=44100, duration=1, amplitude=1):
-        for i in range(framerate * duration):
-            yield math.sin(2.0 * math.pi * float(frequency) * (float(i) / float(framerate))) * float(amplitude)
+    def next_sine_val(frequency, frame=0, framerate=44100, amplitude=1):
+        return math.sin(2.0 * math.pi * float(frequency) * (float(frame) / float(framerate))) * float(amplitude)
 
     @staticmethod
-    def chunk_channels(channels, chunk_size):
-        for iterator in channels:
-            yield zip(*[iter(iterator)] * chunk_size)
-
-    def compute_channel(self, channels, bufsize):
-        # Unpacking the generator returned from chunk_channels is not only incredibly slow it also creates a temporary
-        # tuple of all the objects in the generator, effectively defeating the whole purpose of using generators in the
-        # first place. This is where the memory issues are coming from, this generator cannot be unpacked, it is simply
-        # too large.
-        for chunk in tqdm(((x for x in y) for y in zip(*self.chunk_channels(channels, bufsize))), total=self.total_frames,
-                          desc="Combining Waves", dynamic_ncols=True, leave=True):
-            for gen in ((x for x in y) for y in zip(*chunk)):
-                yield sum(gen) / (self.total_frames * self.total_pixels)
+    def group(chunk_size, iterator):
+        it = iter(iterator)
+        while True:
+            chunk = islice(it, chunk_size)
+            try:
+                first = next(chunk)
+            except StopIteration:
+                return
+            yield chain((first,), chunk)
