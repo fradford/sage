@@ -1,6 +1,6 @@
 import argparse
 
-import sage
+import src
 
 
 def main():
@@ -23,9 +23,9 @@ def main():
     args = parser.parse_args()
 
     if args.mode == 0:
-        converter = sage.ImageToSound.ImageToSound(args)
+        converter = src.ImageToSound.ImageToSound(args)
     elif args.mode == 1:
-        converter = sage.SoundToImage.SoundToImage(args)
+        converter = src.SoundToImage.SoundToImage(args)
     else:
         raise ValueError("Invalid mode")
     converter.run()

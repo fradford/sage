@@ -4,7 +4,7 @@ import struct
 from PIL import Image
 from tqdm import tqdm
 
-import sage
+import src
 
 
 class SoundToImage:
@@ -14,7 +14,7 @@ class SoundToImage:
         self.pixels = []
 
     def run(self):
-        with sage.Timer.Timer() as timer:
+        with src.Timer.Timer() as timer:
             self.read_file()
             self.calc_pixels()
             self.write_image()
