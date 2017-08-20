@@ -23,9 +23,9 @@ def main():
     args = parser.parse_args()
 
     if args.mode == 0:
-        converter = src.ImageToSound.ImageToSound(args)
+        converter = src.Converters.ImageToSound(args)
     elif args.mode == 1:
-        converter = src.SoundToImage.SoundToImage(args)
+        converter = src.Converters.SoundToImage(args)
     else:
         raise ValueError("Invalid mode")
     converter.run()
