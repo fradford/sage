@@ -21,8 +21,7 @@ class ImageToSound:
         img = Image.open(self.args.infile)
         self.total_pixels = reduce(lambda x, y: x * y, img.size)
 
-        self.write_file(self.args.outfile, img, self.args.chunk_size, self.total_frames,
-                        framerate=self.args.framerate)
+        self.write_file(self.args.outfile, img, self.total_frames, framerate=self.args.framerate)
 
     def write_file(self, filename, img, num_frames=-1, num_channels=1, sample_width=2, framerate=44100):
         file = wave.open(filename, "w")
@@ -52,7 +51,7 @@ class ImageToSound:
             else:
                 for pixel in (x for x in img.getdata()):
                     value += self.next_sine_val(get_freq(pixel), frame, self.args.framerate)
-            yield round(value / (self.total_frames * self.total_pixels))
+            yield value / self.total_pixels
 
     @staticmethod
     def next_sine_val(frequency, frame=0, framerate=44100, amplitude=1):

@@ -4,7 +4,7 @@ import sage
 
 
 def main():
-    parser = argparse.ArgumentParser(prog="image_to_sound")
+    parser = argparse.ArgumentParser(prog="sage")
     parser.add_argument('mode', help="mode 0: convert image to sound\nmode 1: convert sound to image", type=int)
     parser.add_argument('infile', help="The name of the input image.")
     parser.add_argument('outfile', help="The name of the output file.")
