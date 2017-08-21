@@ -25,9 +25,9 @@ class ImageToSound:
         self.total_pixels = reduce(lambda x, y: x * y, img.size)
         self.set_frequencies(img)
 
-        self.write_file(self.args.outfile, img, self.total_frames, framerate=self.args.framerate)
+        self.write_file(self.args.outfile, self.total_frames, framerate=self.args.framerate)
 
-    def write_file(self, filename, img, num_frames=-1, num_channels=1, sample_width=2, framerate=44100):
+    def write_file(self, filename, num_frames=-1, num_channels=1, sample_width=2, framerate=44100):
         file = wave.open(filename, "w")
         file.setparams((num_channels, sample_width, framerate, num_frames, "NONE", "not compressed"))
 
