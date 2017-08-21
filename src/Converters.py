@@ -18,10 +18,12 @@ class ImageToSound:
         self.args = args
         self.total_pixels = 0
         self.total_frames = self.args.framerate * self.args.duration
+        self.frequencies = []
 
     def run(self):
         img = Image.open(self.args.infile)
         self.total_pixels = reduce(lambda x, y: x * y, img.size)
+        self.set_frequencies(img)
 
         self.write_file(self.args.outfile, img, self.total_frames, framerate=self.args.framerate)
 
@@ -31,27 +33,36 @@ class ImageToSound:
 
         max_amplitude = 32767
 
-        for chunk in self.group(self.args.chunk_size, self.combine_wave(img)):
+        for chunk in self.group(self.args.chunk_size, self.combine_wave()):
             frames = b''.join(struct.pack('h', int(max_amplitude * sample)) for sample in chunk)
             file.writeframesraw(frames)
 
         file.close()
 
-    def combine_wave(self, img):
-        for frame in tqdm(range(self.total_frames), desc="Calculating Wave", dynamic_ncols=True):
-            value = 0
-            if self.args.inner_count:
-                for pixel in tqdm((x for x in img.getdata()), total=self.total_pixels, desc="Reading image",
+    def set_frequencies(self, img):
+        for pixel in tqdm(img.getdata(), desc="Generating Frequencies", dynamic_ncols=True, leave=False):
+            self.frequencies.append(sum(pixel))
+
+    def combine_frame(self, frame):
+        value = 0
+        if self.args.inner_count:
+            for frequency in tqdm(self.frequencies, total=self.total_pixels, desc="Combining Waves",
                                   dynamic_ncols=True, leave=False):
-                    value += self.next_sine_val(sum(pixel), frame, self.args.framerate)
-            else:
-                for pixel in (x for x in img.getdata()):
-                    value += self.next_sine_val(sum(pixel), frame, self.args.framerate)
+                value += self.next_sine_val(frequency, frame, self.args.framerate)
+        else:
+            for frequency in self.frequencies:
+                value += self.next_sine_val(frequency, frame, self.args.framerate)
+
+        return value
+
+    def combine_wave(self):
+        for frame in tqdm(range(self.total_frames), desc="Calculating Wave", dynamic_ncols=True):
+            value = self.combine_frame(frame)
             yield value / self.total_pixels
 
     @staticmethod
-    def next_sine_val(frequency, frame=0, framerate=44100, amplitude=1):
-        return math.sin(2.0 * math.pi * float(frequency) * (float(frame) / float(framerate))) * float(amplitude)
+    def next_sine_val(frequency, frame=1, framerate=44100, amplitude=1):
+        return math.sin(2 * math.pi * frequency * (frame / framerate)) * amplitude
 
     @staticmethod
     def group(chunk_size, iterator):
