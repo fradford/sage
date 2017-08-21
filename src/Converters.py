@@ -38,21 +38,15 @@ class ImageToSound:
         file.close()
 
     def combine_wave(self, img):
-        def get_freq(rgb):
-            cur_freq = 0
-            for band in rgb:
-                cur_freq += band
-            return cur_freq
-
         for frame in tqdm(range(self.total_frames), desc="Calculating Wave", dynamic_ncols=True):
             value = 0
             if self.args.inner_count:
                 for pixel in tqdm((x for x in img.getdata()), total=self.total_pixels, desc="Reading image",
                                   dynamic_ncols=True, leave=False):
-                    value += self.next_sine_val(get_freq(pixel), frame, self.args.framerate)
+                    value += self.next_sine_val(sum(pixel), frame, self.args.framerate)
             else:
                 for pixel in (x for x in img.getdata()):
-                    value += self.next_sine_val(get_freq(pixel), frame, self.args.framerate)
+                    value += self.next_sine_val(sum(pixel), frame, self.args.framerate)
             yield value / self.total_pixels
 
     @staticmethod
