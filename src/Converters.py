@@ -47,10 +47,13 @@ class ImageToSound:
         return value / self.total_pixels
 
     def combine_wave(self):
-        # TODO: Actually make self.args.threading enable and disable threading
-        mp_pool = Pool()
-        return mp_pool.imap(self.combine_frame, tqdm(range(self.total_frames), desc="Calculating Waves",
-                                                     dynamic_ncols=True))
+        if self.args.threading:
+            mp_pool = Pool()
+            return mp_pool.imap(self.combine_frame, tqdm(range(self.total_frames), desc="Calculating Waves",
+                                                         dynamic_ncols=True))
+        else:
+            return (self.combine_frame(frame) for frame in tqdm(range(self.total_frames), desc="Calculating Waves",
+                                                                dynamic_ncols=True))
 
     @staticmethod
     def calculate_sine(frequency, frame=1, framerate=44100, amplitude=1):
