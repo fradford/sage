@@ -11,9 +11,8 @@ Sound + Image = Sage
 
 Usage
 -----
-:Command:             ``python sage/src/main.py [-h | --help] [-a | --all_pixels]
-                      [-d | --disk_db] [-f | --framerate FRAMERATE]
-                      [-l | --note_length NOTE_LENGTH] mode infile outfile``
+:Command:             ``python sage/src/main.py [-h | --help] [-f | --framerate FRAMERATE]
+                      [-l | --duration DURATION] [-c | --chunksize CHUNKSIZE] mode infile outfile``
 :mode:                0: Convert image into sound.
                           1: Convert sound into image. Doesn't really work currently.
 :infile:              Path to the input file, should be an image if mode is 0 or a sound file if mode
