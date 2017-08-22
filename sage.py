@@ -11,6 +11,9 @@ def main():
     parser.add_argument('-f', '--framerate', help="Output framerate.", default=48000, type=int)
     parser.add_argument('-l', '--duration', help="Length of output, in seconds.", default=180, type=int)
     parser.add_argument('-c', '--chunksize', help="Number of frames to hold in memory.", default=1000000, type=int)
+    parser.add_argument('-t', '--threading', help="Specifies multiprocessing or no multiprocessing. Vital on large "
+                                                  "images, slows down small images considerably due to I/O overhead.",
+                        action="store_true")
     args = parser.parse_args()
 
     if args.mode == 0:
