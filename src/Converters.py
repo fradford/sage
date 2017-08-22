@@ -11,6 +11,7 @@ import src
 
 
 # TODO: Parallelism
+# TODO: Make the output sound good
 
 
 class ImageToSound:
@@ -45,18 +46,12 @@ class ImageToSound:
 
     def combine_frame(self, frame):
         value = 0
-        if self.args.inner_count:
-            for frequency in tqdm(self.frequencies, total=self.total_pixels, desc="Combining Waves",
-                                  dynamic_ncols=True, leave=False):
-                value += self.next_sine_val(frequency, frame, self.args.framerate)
-        else:
-            for frequency in self.frequencies:
-                value += self.next_sine_val(frequency, frame, self.args.framerate)
-
+        for frequency in self.frequencies:
+            value += self.next_sine_val(frequency, frame, self.args.framerate)
         return value
 
     def combine_wave(self):
-        for frame in tqdm(range(self.total_frames), desc="Calculating Wave", dynamic_ncols=True):
+        for frame in tqdm(range(self.total_frames), desc="Calculating Waves", dynamic_ncols=True):
             value = self.combine_frame(frame)
             yield value / self.total_pixels
 
