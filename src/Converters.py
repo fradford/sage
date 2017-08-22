@@ -11,7 +11,6 @@ from tqdm import tqdm
 import src
 
 
-# TODO: Parallelism
 # TODO: Make the output sound good
 
 
