@@ -17,15 +17,14 @@ import src
 class ImageToSound:
     def __init__(self, args):
         self.args = args
-        self.total_pixels = 0
         self.total_frames = self.args.framerate * self.args.duration
-        self.frequencies = []
+
+        self.img = Image.open(self.args.infile)
+        self.total_pixels = reduce(lambda x, y: x * y, self.img.size)
+        self.frequencies = [sum(pixel) for pixel in tqdm(self.img.getdata(), desc="Generating frequencies",
+                                                         dynamic_ncols=True, leave=False)]
 
     def run(self):
-        img = Image.open(self.args.infile)
-        self.total_pixels = reduce(lambda x, y: x * y, img.size)
-        self.set_frequencies(img)
-
         self.write_file(self.args.outfile, self.total_frames, framerate=self.args.framerate)
 
     def write_file(self, filename, num_frames=-1, num_channels=1, sample_width=2, framerate=44100):
@@ -34,26 +33,21 @@ class ImageToSound:
 
         max_amplitude = 32767
 
-        for chunk in self.group(self.args.chunk_size, self.combine_wave()):
+        for chunk in self.group(self.args.chunksize, self.combine_wave()):
             frames = b''.join(struct.pack('h', int(max_amplitude * sample)) for sample in chunk)
             file.writeframesraw(frames)
 
         file.close()
 
-    def set_frequencies(self, img):
-        for pixel in tqdm(img.getdata(), desc="Generating Frequencies", dynamic_ncols=True, leave=False):
-            self.frequencies.append(sum(pixel))
-
     def combine_frame(self, frame):
         value = 0
         for frequency in self.frequencies:
             value += self.next_sine_val(frequency, frame, self.args.framerate)
-        return value
+        return value / self.total_pixels
 
     def combine_wave(self):
         for frame in tqdm(range(self.total_frames), desc="Calculating Waves", dynamic_ncols=True):
-            value = self.combine_frame(frame)
-            yield value / self.total_pixels
+            yield self.combine_frame(frame)
 
     @staticmethod
     def next_sine_val(frequency, frame=1, framerate=44100, amplitude=1):
