@@ -3,6 +3,7 @@ import struct
 import wave
 from functools import reduce
 from itertools import chain, islice
+from multiprocessing import Pool
 
 from PIL import Image
 from tqdm import tqdm
@@ -10,7 +11,6 @@ from tqdm import tqdm
 import src
 
 
-# TODO: Parallelism
 # TODO: Make the output sound good
 
 
@@ -42,15 +42,20 @@ class ImageToSound:
     def combine_frame(self, frame):
         value = 0
         for frequency in self.frequencies:
-            value += self.next_sine_val(frequency, frame, self.args.framerate)
+            value += self.calculate_sine(frequency, frame, self.args.framerate)
         return value / self.total_pixels
 
     def combine_wave(self):
-        for frame in tqdm(range(self.total_frames), desc="Calculating Waves", dynamic_ncols=True):
-            yield self.combine_frame(frame)
+        if self.args.threading:
+            mp_pool = Pool()
+            return mp_pool.imap(self.combine_frame, tqdm(range(self.total_frames), desc="Calculating Waves",
+                                                         dynamic_ncols=True))
+        else:
+            return (self.combine_frame(frame) for frame in tqdm(range(self.total_frames), desc="Calculating Waves",
+                                                                dynamic_ncols=True))
 
     @staticmethod
-    def next_sine_val(frequency, frame=1, framerate=44100, amplitude=1):
+    def calculate_sine(frequency, frame=1, framerate=44100, amplitude=1):
         return math.sin(2 * math.pi * frequency * (frame / framerate)) * amplitude
 
     @staticmethod
